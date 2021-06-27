@@ -1,0 +1,7 @@
+{{- if $.Site.Params.cookieconsent.enable -}}
+<div data-cookieconsent="{{ .Get 0 | default "allow" }}">
+{{- end -}}
+   {{- .Inner -}}
+{{- if $.Site.Params.cookieconsent.enable -}}
+</div>
+{{- end -}}

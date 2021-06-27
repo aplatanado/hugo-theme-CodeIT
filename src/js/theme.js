@@ -102,7 +102,7 @@ class Theme {
               document.body.setAttribute("theme", "light");
             else document.body.setAttribute("theme", "dark");
             this.isDark = !this.isDark;
-            window.localStorage &&
+            this.config.cookieconsent && window.localStorage &&
               localStorage.setItem("theme", this.isDark ? "dark" : "light");
             for (let event of this.switchThemeEventSet) event();
           },
@@ -848,8 +848,60 @@ class Theme {
   }
 
   initCookieconsent() {
-    if (this.config.cookieconsent)
-      cookieconsent.initialise(this.config.cookieconsent);
+    if (!this.config.cookieconsent) return;
+    cookieconsent.initialise({
+      ...this.config.cookieconsent,
+      onInitialise: status => {
+        this.onCookieconsentChange(status);
+      },
+      onStatusChange: (status, chosenBefore) => {
+        this.onCookieconsentChange(status, chosenBefore);
+      },
+    });
+  }
+
+  initIfCookieconsent() {
+    try {
+      this.initMapbox();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  onCookieconsentChange(status, chosenBefore) {
+    if (status !== "allow") return;
+    var $fragment = document.createDocumentFragment();
+    document.querySelectorAll("[data-cookieconsent]").forEach($element => {
+      if ($element.getAttribute("data-cookieconsent") === "allow") {
+        if ($element.tagName === "IFRAME") {
+          $element.src = $element.getAttribute("data-src");
+          $element.removeAttribute("data-src");
+          $element.removeAttribute("data-cookieconsent");
+        } else if ($element.tagName === "SCRIPT") {
+          var $script = document.createElement("script");
+          $script.type = 'text/javascript';
+          $script.src = $element.getAttribute("data-src");
+          $script.async = false;
+          this.util.forEach($element.attributes, $attrib => {
+            if (! ["type", "data-src", "data-cookieconsent", "src", "async"].includes($attrib.name)) {
+              $script.setAttribute($attrib.name, $attrib.value);
+            }
+          });
+          $script.innerHTML = $element.innerHTML;
+          $fragment.appendChild($script);
+          $element.remove();
+        } else {
+          $element.removeAttribute("data-cookieconsent");
+        }
+      }
+      else {
+        $element.remove();
+      }
+    });
+    if ($fragment.childElementCount > 0)
+      $fragment.lastElementChild.onload = () => this.initIfCookieconsent();
+    else this.initIfCookieconsent();
+    document.body.appendChild($fragment);
   }
 
   onScroll() {
@@ -950,7 +1002,7 @@ class Theme {
       this.initMermaid();
       this.initEcharts();
       this.initTypeit();
-      this.initMapbox();
+      if (!this.config.cookieconsent) this.initIfCookieconsent();
       this.initCookieconsent();
     } catch (err) {
       console.error(err);

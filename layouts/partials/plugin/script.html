@@ -1,5 +1,8 @@
+{{- $cookieConsentEnabled := default false site.Params.cookieconsent.enable -}}
+{{- $requiresCookieConsent := default false .RequiresCookieConsent | and $cookieConsentEnabled -}}
+{{- $type := cond $requiresCookieConsent "type=\"text/plain\"" "type=\"text/javascript\"" -}}
 {{- if .Content -}}
-    <script type="text/javascript">
+    <script {{ $type | safeHTMLAttr }}{{ if $requiresCookieConsent }} data-cookieconsent="allow"{{ end }}>
         {{- .Content | safeJS -}}
     </script>
 {{- else if strings.HasPrefix .Source "<script" -}}
@@ -21,5 +24,5 @@
         {{- end -}}
         {{- $src = $resource.RelPermalink -}}
     {{- end -}}
-    <script type="text/javascript" src="{{ $src }}"{{ if .Crossorigin }} crossorigin="anonymous"{{ end }}{{ with $integrity }} integrity="{{ . }}"{{ end }}{{ if .Async }} async{{ end }}{{ if .Defer }} defer{{ end }}{{ with .Attr }} {{ . | safeHTMLAttr }}{{ end }}></script>
+    <script {{ $type | safeHTMLAttr }}{{ if $requiresCookieConsent }} data-src="{{ $src }}" data-cookieconsent="allow"{{ else }} src="{{ $src }}"{{ end }}{{ if .Crossorigin }} crossorigin="anonymous"{{ end }}{{ with $integrity }} integrity="{{ . }}"{{ end }}{{ if .Async }} async{{ end }}{{ if .Defer }} defer{{ end }}{{ with .Attr }} {{ . | safeHTMLAttr }}{{ end }}></script>
 {{- end -}}
